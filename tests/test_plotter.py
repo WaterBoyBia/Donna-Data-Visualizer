@@ -30,14 +30,15 @@ class TestCreatePlot:
         y_series = [np.array([1, 2, 3]), np.array([4, 5, 6])]
         labels = ["A", "B"]
         fig = create_plot(x, y_series, labels)
-        ax = fig.axes[0]
-        assert len(ax.get_lines()) == 2
+        # Two series use twin axes: one line per axis
+        total_lines = sum(len(ax.get_lines()) for ax in fig.axes)
+        assert total_lines == 2
 
     def test_axis_labels_set(self):
         x = np.array([0, 1, 2])
         y_series = [np.array([1, 2, 3])]
         labels = ["Signal"]
-        fig = create_plot(x, y_series, labels, x_label="mL", y_label="mAU", title="Test")
+        fig = create_plot(x, y_series, labels, x_label="mL", y_labels=["mAU"], title="Test")
         ax = fig.axes[0]
         assert ax.get_xlabel() == "mL"
         assert ax.get_ylabel() == "mAU"

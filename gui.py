@@ -3,13 +3,14 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox
 
+import numpy as np
 import matplotlib
 matplotlib.use("TkAgg")
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 
 from readers import read_file
-from plotter import create_plot
+from plotter import CURVE_COLORS, create_plot
 
 
 class DonnaApp:
@@ -21,6 +22,12 @@ class DonnaApp:
         self.root.minsize(1000, 600)
 
         self.current_figure: Figure | None = None
+        self.annotate_vars: list[tk.BooleanVar] = []
+        self._last_file_path: str = ""
+        self._click_annotations: list = []
+        self._canvas: FigureCanvasTkAgg | None = None
+        self._x_data: np.ndarray | None = None
+        self._y_series: list[np.ndarray] = []
 
         self._build_ui()
 
@@ -47,15 +54,23 @@ class DonnaApp:
         self.x_label_var = tk.StringVar(value="X")
         tk.Entry(left_frame, textvariable=self.x_label_var).pack(fill=tk.X, pady=(0, 10))
 
-        # Y-axis label
-        tk.Label(left_frame, text="Y-axis label:").pack(anchor=tk.W)
-        self.y_label_var = tk.StringVar(value="Y")
-        tk.Entry(left_frame, textvariable=self.y_label_var).pack(fill=tk.X, pady=(0, 10))
+        # Y-axis labels (populated dynamically per series)
+        tk.Label(left_frame, text="Y-axis labels:").pack(anchor=tk.W)
+        self.y_labels_frame = tk.Frame(left_frame)
+        self.y_labels_frame.pack(fill=tk.X, pady=(0, 10))
+        self.y_label_vars: list[tk.StringVar] = []
+        tk.Label(self.y_labels_frame, text="(加载文件后可编辑)", fg="gray").pack(anchor=tk.W)
 
         # Chart title
         tk.Label(left_frame, text="Chart title:").pack(anchor=tk.W)
         self.title_var = tk.StringVar(value="Chart")
         tk.Entry(left_frame, textvariable=self.title_var).pack(fill=tk.X, pady=(0, 10))
+
+        # Annotate peaks option (populated dynamically after file load)
+        tk.Label(left_frame, text="标注峰值:").pack(anchor=tk.W)
+        self.annotate_frame = tk.Frame(left_frame)
+        self.annotate_frame.pack(fill=tk.X, pady=(0, 5))
+        tk.Label(self.annotate_frame, text="(加载文件后可选)", fg="gray").pack(anchor=tk.W)
 
         # Buttons
         button_frame = tk.Frame(left_frame)
@@ -90,6 +105,32 @@ class DonnaApp:
         if path:
             self.file_path_var.set(path)
 
+    def _update_annotate_checkboxes(self, labels: list[str]) -> None:
+        """Rebuild per-series annotation checkboxes."""
+        for widget in self.annotate_frame.winfo_children():
+            widget.destroy()
+        self.annotate_vars = []
+        for label in labels:
+            var = tk.BooleanVar(value=False)
+            self.annotate_vars.append(var)
+            tk.Checkbutton(
+                self.annotate_frame, text=label, variable=var
+            ).pack(anchor=tk.W)
+
+    def _update_y_label_entries(self, labels: list[str]) -> None:
+        """Rebuild per-series Y-axis label entries."""
+        for widget in self.y_labels_frame.winfo_children():
+            widget.destroy()
+        self.y_label_vars = []
+        for i, label in enumerate(labels):
+            color = CURVE_COLORS[i] if i < len(CURVE_COLORS) else "black"
+            row_frame = tk.Frame(self.y_labels_frame)
+            row_frame.pack(fill=tk.X, pady=(0, 2))
+            tk.Label(row_frame, text=f"{label}:", fg=color).pack(side=tk.LEFT)
+            var = tk.StringVar(value=label)
+            self.y_label_vars.append(var)
+            tk.Entry(row_frame, textvariable=var).pack(side=tk.LEFT, fill=tk.X, expand=True)
+
     def _plot(self) -> None:
         """Read the selected file and display the plot."""
         path = self.file_path_var.get()
@@ -111,11 +152,21 @@ class DonnaApp:
             return
 
         x_label = self.x_label_var.get() or "X"
-        y_label = self.y_label_var.get() or "Y"
+        y_labels = [v.get() or "Y" for v in self.y_label_vars] if self.y_label_vars else ["Y"]
         title = self.title_var.get() or "Chart"
 
-        fig = create_plot(x, y_series, labels, x_label, y_label, title)
+        # Only rebuild checkboxes and y-label entries when file changes
+        if path != self._last_file_path:
+            self._update_annotate_checkboxes(labels)
+            self._update_y_label_entries(labels)
+            self._last_file_path = path
+
+        annotate = [v.get() for v in self.annotate_vars]
+        fig = create_plot(x, y_series, labels, x_label, y_labels=y_labels, title=title, annotate_peaks=annotate)
         self.current_figure = fig
+        self._x_data = x
+        self._y_series = y_series
+        self._click_annotations = []
 
         # Clear previous canvas
         for widget in self.canvas_frame.winfo_children():
@@ -124,6 +175,48 @@ class DonnaApp:
         canvas = FigureCanvasTkAgg(fig, master=self.canvas_frame)
         canvas.draw()
         canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+        self._canvas = canvas
+
+        # Enable click-to-annotate on curves
+        canvas.mpl_connect("button_press_event", self._on_click_annotate)
+
+    def _on_click_annotate(self, event: matplotlib.backend_bases.MouseEvent) -> None:
+        """Annotate the nearest data point when user clicks on the plot."""
+        if event.inaxes is None or self.current_figure is None:
+            return
+
+        click_x, click_y = event.xdata, event.ydata
+        if click_x is None or click_y is None:
+            return
+
+        # Find the nearest point across all curves
+        best_dist = float("inf")
+        best_x = 0.0
+        best_y = 0.0
+
+        for y_data in self._y_series:
+            distances = np.sqrt((self._x_data - click_x) ** 2 + (y_data - click_y) ** 2)
+            idx = int(np.nanargmin(distances))
+            if distances[idx] < best_dist:
+                best_dist = distances[idx]
+                best_x = self._x_data[idx]
+                best_y = y_data[idx]
+
+        ax = self.current_figure.axes[0]
+        ann = ax.annotate(
+            f"{best_x:.3f} ml",
+            xy=(best_x, best_y),
+            xytext=(0, 10),
+            textcoords="offset points",
+            fontsize=8,
+            ha="center",
+            color="black",
+            arrowprops=dict(arrowstyle="->", color="black", lw=0.8),
+        )
+        self._click_annotations.append(ann)
+
+        if self._canvas is not None:
+            self._canvas.draw_idle()
 
     def _save(self) -> None:
         """Save the current plot as a PNG file."""
