@@ -72,6 +72,13 @@ class DonnaApp:
         self.annotate_frame.pack(fill=tk.X, pady=(0, 5))
         tk.Label(self.annotate_frame, text="(加载文件后可选)", fg="gray").pack(anchor=tk.W)
 
+        # Show/hide curves option (populated dynamically after file load)
+        tk.Label(left_frame, text="显示曲线:").pack(anchor=tk.W)
+        self.show_frame = tk.Frame(left_frame)
+        self.show_frame.pack(fill=tk.X, pady=(0, 5))
+        self.show_vars: list[tk.BooleanVar] = []
+        tk.Label(self.show_frame, text="(加载文件后可选)", fg="gray").pack(anchor=tk.W)
+
         # Buttons
         button_frame = tk.Frame(left_frame)
         button_frame.pack(fill=tk.X, pady=(10, 0))
@@ -115,6 +122,18 @@ class DonnaApp:
             self.annotate_vars.append(var)
             tk.Checkbutton(
                 self.annotate_frame, text=label, variable=var
+            ).pack(anchor=tk.W)
+
+    def _update_show_checkboxes(self, labels: list[str]) -> None:
+        """Rebuild per-series show/hide checkboxes, default all checked."""
+        for widget in self.show_frame.winfo_children():
+            widget.destroy()
+        self.show_vars = []
+        for label in labels:
+            var = tk.BooleanVar(value=True)
+            self.show_vars.append(var)
+            tk.Checkbutton(
+                self.show_frame, text=label, variable=var
             ).pack(anchor=tk.W)
 
     DEFAULT_Y_LABELS = [
@@ -164,15 +183,23 @@ class DonnaApp:
         if path != self._last_file_path:
             self._update_annotate_checkboxes(labels)
             self._update_y_label_entries(labels)
+            self._update_show_checkboxes(labels)
             self._last_file_path = path
 
-        y_labels = [v.get() for v in self.y_label_vars] if self.y_label_vars else None
+        # Filter series by show/hide checkboxes
+        show_flags = [v.get() for v in self.show_vars] if self.show_vars else [True] * len(y_series)
+        filtered_y = [y for y, s in zip(y_series, show_flags) if s]
+        filtered_labels = [l for l, s in zip(labels, show_flags) if s]
+        filtered_annotate_vars = [v for v, s in zip(self.annotate_vars, show_flags) if s]
+        filtered_y_label_vars = [v for v, s in zip(self.y_label_vars, show_flags) if s]
 
-        annotate = [v.get() for v in self.annotate_vars]
-        fig = create_plot(x, y_series, labels, x_label, y_labels=y_labels, title=title, annotate_peaks=annotate)
+        y_labels = [v.get() for v in filtered_y_label_vars] if filtered_y_label_vars else None
+
+        annotate = [v.get() for v in filtered_annotate_vars]
+        fig = create_plot(x, filtered_y, filtered_labels, x_label, y_labels=y_labels, title=title, annotate_peaks=annotate)
         self.current_figure = fig
         self._x_data = x
-        self._y_series = y_series
+        self._y_series = filtered_y
         self._click_annotations = []
 
         # Clear previous canvas
