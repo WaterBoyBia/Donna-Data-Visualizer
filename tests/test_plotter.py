@@ -50,8 +50,8 @@ class TestCreatePlot:
         labels = ["Signal"]
         fig = create_plot(x, y_series, labels)
         ax = fig.axes[0]
-        assert ax.get_xlabel() == "X"
-        assert ax.get_ylabel() == "Y"
+        assert ax.get_xlabel() == "Elution volume (mL)"
+        assert ax.get_ylabel() == "Absorbance at 280 nm (mAU)"
         assert ax.get_title() == "Chart"
 
     def test_legend_has_series_names(self):

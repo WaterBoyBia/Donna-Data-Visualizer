@@ -51,7 +51,7 @@ class DonnaApp:
 
         # X-axis label
         tk.Label(left_frame, text="X-axis label:").pack(anchor=tk.W)
-        self.x_label_var = tk.StringVar(value="X")
+        self.x_label_var = tk.StringVar(value="Elution volume (mL)")
         tk.Entry(left_frame, textvariable=self.x_label_var).pack(fill=tk.X, pady=(0, 10))
 
         # Y-axis labels (populated dynamically per series)
@@ -117,6 +117,11 @@ class DonnaApp:
                 self.annotate_frame, text=label, variable=var
             ).pack(anchor=tk.W)
 
+    DEFAULT_Y_LABELS = [
+        "Absorbance at 280 nm (mAU)",
+        "Absorbance at 260 nm (mAU)",
+    ]
+
     def _update_y_label_entries(self, labels: list[str]) -> None:
         """Rebuild per-series Y-axis label entries."""
         for widget in self.y_labels_frame.winfo_children():
@@ -124,10 +129,11 @@ class DonnaApp:
         self.y_label_vars = []
         for i, label in enumerate(labels):
             color = CURVE_COLORS[i] if i < len(CURVE_COLORS) else "black"
+            default = self.DEFAULT_Y_LABELS[i] if i < len(self.DEFAULT_Y_LABELS) else label
             row_frame = tk.Frame(self.y_labels_frame)
             row_frame.pack(fill=tk.X, pady=(0, 2))
             tk.Label(row_frame, text=f"{label}:", fg=color).pack(side=tk.LEFT)
-            var = tk.StringVar(value=label)
+            var = tk.StringVar(value=default)
             self.y_label_vars.append(var)
             tk.Entry(row_frame, textvariable=var).pack(side=tk.LEFT, fill=tk.X, expand=True)
 
@@ -151,8 +157,7 @@ class DonnaApp:
             messagebox.showwarning("Empty data", "The file contains no data.")
             return
 
-        x_label = self.x_label_var.get() or "X"
-        y_labels = [v.get() or "Y" for v in self.y_label_vars] if self.y_label_vars else ["Y"]
+        x_label = self.x_label_var.get() or "Elution volume (mL)"
         title = self.title_var.get() or "Chart"
 
         # Only rebuild checkboxes and y-label entries when file changes
@@ -160,6 +165,8 @@ class DonnaApp:
             self._update_annotate_checkboxes(labels)
             self._update_y_label_entries(labels)
             self._last_file_path = path
+
+        y_labels = [v.get() for v in self.y_label_vars] if self.y_label_vars else None
 
         annotate = [v.get() for v in self.annotate_vars]
         fig = create_plot(x, y_series, labels, x_label, y_labels=y_labels, title=title, annotate_peaks=annotate)
@@ -203,15 +210,21 @@ class DonnaApp:
                 best_y = y_data[idx]
 
         ax = self.current_figure.axes[0]
+        y_min = ax.get_ylim()[0]
+        y_max = ax.get_ylim()[1]
+        y_range = y_max - y_min if y_max != y_min else 1.0
+        above = (best_y - y_min) / y_range > 0.8
         ann = ax.annotate(
             f"{best_x:.3f} ml",
             xy=(best_x, best_y),
-            xytext=(0, 10),
+            xytext=(0, -25 if above else 15),
             textcoords="offset points",
-            fontsize=8,
+            fontsize=12,
             ha="center",
+            va="top" if above else "bottom",
             color="black",
-            arrowprops=dict(arrowstyle="->", color="black", lw=0.8),
+            arrowprops=dict(arrowstyle="->", color="black", lw=1.2),
+            clip_on=True,
         )
         self._click_annotations.append(ann)
 

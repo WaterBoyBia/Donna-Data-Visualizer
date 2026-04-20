@@ -8,6 +8,10 @@ import matplotlib.pyplot as plt
 matplotlib.rcParams["font.family"] = "serif"
 matplotlib.rcParams["font.serif"] = ["Times New Roman", "SimHei", "SimSun"]
 matplotlib.rcParams["axes.unicode_minus"] = False
+matplotlib.rcParams["font.size"] = 20
+matplotlib.rcParams["axes.linewidth"] = 1.5
+matplotlib.rcParams["lines.linewidth"] = 2.0
+matplotlib.rcParams["lines.antialiased"] = True
 
 CURVE_COLORS = ["blue", "red"]
 
@@ -16,7 +20,7 @@ def create_plot(
     x: np.ndarray,
     y_series: list[np.ndarray],
     labels: list[str],
-    x_label: str = "X",
+    x_label: str = "Elution volume (mL)",
     y_labels: list[str] | None = None,
     title: str = "Chart",
     annotate_peaks: list[bool] | None = None,
@@ -39,7 +43,9 @@ def create_plot(
     if annotate_peaks is None:
         annotate_peaks = [False] * len(y_series)
     if y_labels is None:
-        y_labels = ["Y"]
+        y_labels = ["Absorbance at 280 nm (mAU)"]
+    if len(y_labels) < 2 and len(y_series) >= 2:
+        y_labels.append("Absorbance at 260 nm (mAU)")
 
     plt.close("all")
     fig, ax1 = plt.subplots()
@@ -53,15 +59,20 @@ def create_plot(
             peak_idx = np.nanargmax(y_data)
             peak_x = x[peak_idx]
             peak_y = y_data[peak_idx]
+            y_min, y_max = np.nanmin(y_data), np.nanmax(y_data)
+            y_range = y_max - y_min if y_max != y_min else 1.0
+            above = (peak_y - y_min) / y_range > 0.8
             ax1.annotate(
                 f"{peak_x:.3f} ml",
                 xy=(peak_x, peak_y),
-                xytext=(0, 10),
+                xytext=(0, -25 if above else 15),
                 textcoords="offset points",
-                fontsize=8,
+                fontsize=12,
                 ha="center",
+                va="top" if above else "bottom",
                 color="black",
-                arrowprops=dict(arrowstyle="->", color="black", lw=0.8),
+                arrowprops=dict(arrowstyle="->", color="black", lw=1.2),
+                clip_on=True,
             )
 
     # Left y-axis label colored by first series, ticks stay black
@@ -82,7 +93,7 @@ def create_plot(
         ax2.tick_params(axis="y", labelcolor="black")
 
     ax1.set_title(title)
-    ax1.legend()
+    ax1.legend(fontsize=10)
 
     fig.tight_layout()
 
