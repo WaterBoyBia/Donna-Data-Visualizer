@@ -55,25 +55,29 @@ def create_plot(
         color = CURVE_COLORS[i] if i < len(CURVE_COLORS) else None
         ax1.plot(x, y_data, label=label, color=color)
 
+    # Annotate peaks after all curves are drawn (so ylim is set correctly)
+    for i, (y_data, label, show_peak) in enumerate(zip(y_series, labels, annotate_peaks)):
         if show_peak:
             peak_idx = np.nanargmax(y_data)
             peak_x = x[peak_idx]
             peak_y = y_data[peak_idx]
-            y_min, y_max = np.nanmin(y_data), np.nanmax(y_data)
-            y_range = y_max - y_min if y_max != y_min else 1.0
-            above = (peak_y - y_min) / y_range > 0.8
             ax1.annotate(
                 f"{peak_x:.3f} ml",
                 xy=(peak_x, peak_y),
-                xytext=(0, -25 if above else 15),
+                xytext=(0, 15),
                 textcoords="offset points",
                 fontsize=12,
                 ha="center",
-                va="top" if above else "bottom",
+                va="bottom",
                 color="black",
                 arrowprops=dict(arrowstyle="->", color="black", lw=1.2),
-                clip_on=True,
             )
+
+    # Expand y-axis upper limit to keep peak annotations inside the frame
+    if any(show for show in annotate_peaks):
+        y_lo, y_hi = ax1.get_ylim()
+        y_range = y_hi - y_lo if y_hi != y_lo else 1.0
+        ax1.set_ylim(y_lo, y_hi + y_range * 0.12)
 
     # Left y-axis label colored by first series, ticks stay black
     left_color = CURVE_COLORS[0] if len(y_series) >= 1 else "black"

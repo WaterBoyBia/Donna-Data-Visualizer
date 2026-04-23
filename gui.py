@@ -237,21 +237,16 @@ class DonnaApp:
                 best_y = y_data[idx]
 
         ax = self.current_figure.axes[0]
-        y_min = ax.get_ylim()[0]
-        y_max = ax.get_ylim()[1]
-        y_range = y_max - y_min if y_max != y_min else 1.0
-        above = (best_y - y_min) / y_range > 0.8
         ann = ax.annotate(
             f"{best_x:.3f} ml",
             xy=(best_x, best_y),
-            xytext=(0, -25 if above else 15),
+            xytext=(0, 15),
             textcoords="offset points",
             fontsize=12,
             ha="center",
-            va="top" if above else "bottom",
+            va="bottom",
             color="black",
             arrowprops=dict(arrowstyle="->", color="black", lw=1.2),
-            clip_on=True,
         )
         self._click_annotations.append(ann)
 
