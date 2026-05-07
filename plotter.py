@@ -4,9 +4,8 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 
-# Configure font: Times New Roman for all text, fallback for Chinese
-matplotlib.rcParams["font.family"] = "serif"
-matplotlib.rcParams["font.serif"] = ["Times New Roman", "SimHei", "SimSun"]
+# Configure font: Times New Roman primary, SimHei/SimSun fallback for Chinese
+matplotlib.rcParams["font.family"] = ["Times New Roman", "SimHei", "SimSun"]
 matplotlib.rcParams["axes.unicode_minus"] = False
 matplotlib.rcParams["font.size"] = 20
 matplotlib.rcParams["axes.linewidth"] = 1.5
@@ -22,7 +21,7 @@ def create_plot(
     labels: list[str],
     x_label: str = "Elution volume (mL)",
     y_labels: list[str] | None = None,
-    title: str = "Chart",
+    title: str = "",
     annotate_peaks: list[bool] | None = None,
 ) -> matplotlib.figure.Figure:
     """Create a matplotlib Figure with all y series plotted against x.
@@ -96,7 +95,8 @@ def create_plot(
         ax2.set_ylabel(right_ylabel, color=right_color)
         ax2.tick_params(axis="y", labelcolor="black")
 
-    ax1.set_title(title)
+    if title:
+        ax1.set_title(title)
     ax1.legend(fontsize=10)
 
     fig.tight_layout()

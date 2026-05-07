@@ -63,7 +63,7 @@ class DonnaApp:
 
         # Chart title
         tk.Label(left_frame, text="Chart title:").pack(anchor=tk.W)
-        self.title_var = tk.StringVar(value="Chart")
+        self.title_var = tk.StringVar(value="")
         tk.Entry(left_frame, textvariable=self.title_var).pack(fill=tk.X, pady=(0, 10))
 
         # Annotate peaks option (populated dynamically after file load)
@@ -103,9 +103,10 @@ class DonnaApp:
     def _browse_file(self) -> None:
         """Open file dialog to select a data file."""
         filetypes = [
-            ("Data files", "*.asc *.xls"),
+            ("Data files", "*.asc *.xls *.csv"),
             ("ASC files", "*.asc"),
             ("XLS files", "*.xls"),
+            ("CSV files", "*.csv"),
             ("All files", "*.*"),
         ]
         path = filedialog.askopenfilename(filetypes=filetypes)
@@ -177,7 +178,7 @@ class DonnaApp:
             return
 
         x_label = self.x_label_var.get() or "Elution volume (mL)"
-        title = self.title_var.get() or "Chart"
+        title = self.title_var.get()
 
         # Only rebuild checkboxes and y-label entries when file changes
         if path != self._last_file_path:

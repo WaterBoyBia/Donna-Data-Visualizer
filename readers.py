@@ -1,4 +1,4 @@
-"""File readers for ASC and XLS data formats."""
+"""File readers for ASC, XLS and CSV data formats."""
 
 import os
 
@@ -9,7 +9,7 @@ def read_file(path: str) -> tuple[np.ndarray, list[np.ndarray], list[str]]:
     """Read a data file and return (x_data, [y_data_1, ...], [series_name_1, ...]).
 
     Args:
-        path: Path to the data file (.asc or .xls).
+        path: Path to the data file (.asc, .xls or .csv).
 
     Returns:
         Tuple of (x_data, list of y_data arrays, list of series label strings).
@@ -19,9 +19,9 @@ def read_file(path: str) -> tuple[np.ndarray, list[np.ndarray], list[str]]:
         ValueError: If the file extension is not supported.
     """
     ext = os.path.splitext(path)[1].lower()
-    if ext not in (".asc", ".xls"):
+    if ext not in (".asc", ".xls", ".csv"):
         raise ValueError(
-            f"Unsupported file type: '{ext}'. Supported types: .asc, .xls"
+            f"Unsupported file type: '{ext}'. Supported types: .asc, .xls, .csv"
         )
 
     if not os.path.isfile(path):
@@ -29,6 +29,8 @@ def read_file(path: str) -> tuple[np.ndarray, list[np.ndarray], list[str]]:
 
     if ext == ".asc":
         return _read_asc(path)
+    elif ext == ".csv":
+        return _read_csv(path)
     else:
         return _read_xls(path)
 
@@ -86,3 +88,39 @@ def _read_xls(path: str) -> tuple[np.ndarray, list[np.ndarray], list[str]]:
         y_series.append(col_data)
 
     return x_data, y_series, y_labels
+
+
+def _detect_encoding(path: str) -> str:
+    """Detect file encoding from BOM."""
+    with open(path, "rb") as f:
+        bom = f.read(2)
+    if bom == b"\xff\xfe":
+        return "utf-16"
+    return "utf-8-sig" if bom[:2] == b"\xef\xbb" else "utf-8"
+
+
+def _read_csv(path: str) -> tuple[np.ndarray, list[np.ndarray], list[str]]:
+    """Read a CSV chromatogram file.
+
+    Format: 3 header lines, then tab-separated data.
+    Only the first two columns (x, y) are read.
+    Supports UTF-16 (with BOM) and UTF-8 encodings.
+    """
+    encoding = _detect_encoding(path)
+
+    with open(path, "r", encoding=encoding) as f:
+        lines = f.readlines()
+
+    # Extract y-unit from header line 3 (e.g., "ml\tmAU\t..." -> "mAU")
+    y_label = "Signal"
+    if len(lines) >= 3:
+        header_parts = lines[2].strip().split("\t")
+        non_empty = [p.strip() for p in header_parts if p.strip()]
+        if len(non_empty) >= 2:
+            y_label = non_empty[1]
+
+    data = np.loadtxt(path, skiprows=3, delimiter="\t", usecols=(0, 1), encoding=encoding)
+    x_data = data[:, 0]
+    y_data = data[:, 1]
+
+    return x_data, [y_data], [y_label]
