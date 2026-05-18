@@ -44,13 +44,13 @@ def _read_asc(path: str) -> tuple[np.ndarray, list[np.ndarray], list[str]]:
         lines = f.readlines()
 
     # Extract y-unit from header line 3 (e.g., "ml\tmAU" -> "mAU")
+    # Header is pairs: (x_unit, y_unit, x_unit, y_unit, ...); take y_unit of first pair
     y_label = "Signal"
     if len(lines) >= 3:
         header_parts = lines[2].strip().split("\t")
-        # Filter empty trailing parts from tab-delimited header
         non_empty = [p.strip() for p in header_parts if p.strip()]
         if len(non_empty) >= 2:
-            y_label = non_empty[-1]
+            y_label = non_empty[1]
 
     # Parse data: skip 3 header lines; usecols=(0,1) avoids trailing empty column
     data = np.loadtxt(path, skiprows=3, delimiter="\t", usecols=(0, 1))

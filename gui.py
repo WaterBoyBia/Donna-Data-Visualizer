@@ -54,6 +54,11 @@ class DonnaApp:
         self.x_label_var = tk.StringVar(value="Elution volume (mL)")
         tk.Entry(left_frame, textvariable=self.x_label_var).pack(fill=tk.X, pady=(0, 10))
 
+        # X-axis max value
+        tk.Label(left_frame, text="X-axis max (mL):").pack(anchor=tk.W)
+        self.x_max_var = tk.StringVar(value="25")
+        tk.Entry(left_frame, textvariable=self.x_max_var, width=10).pack(anchor=tk.W, pady=(0, 10))
+
         # Y-axis labels (populated dynamically per series)
         tk.Label(left_frame, text="Y-axis labels:").pack(anchor=tk.W)
         self.y_labels_frame = tk.Frame(left_frame)
@@ -180,6 +185,11 @@ class DonnaApp:
         x_label = self.x_label_var.get() or "Elution volume (mL)"
         title = self.title_var.get()
 
+        try:
+            x_max = float(self.x_max_var.get())
+        except ValueError:
+            x_max = 25.0
+
         # Only rebuild checkboxes and y-label entries when file changes
         if path != self._last_file_path:
             self._update_annotate_checkboxes(labels)
@@ -197,7 +207,7 @@ class DonnaApp:
         y_labels = [v.get() for v in filtered_y_label_vars] if filtered_y_label_vars else None
 
         annotate = [v.get() for v in filtered_annotate_vars]
-        fig = create_plot(x, filtered_y, filtered_labels, x_label, y_labels=y_labels, title=title, annotate_peaks=annotate)
+        fig = create_plot(x, filtered_y, filtered_labels, x_label, y_labels=y_labels, title=title, x_max=x_max, annotate_peaks=annotate)
         self.current_figure = fig
         self._x_data = x
         self._y_series = filtered_y

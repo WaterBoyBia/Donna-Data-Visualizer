@@ -22,6 +22,7 @@ def create_plot(
     x_label: str = "Elution volume (mL)",
     y_labels: list[str] | None = None,
     title: str = "",
+    x_max: float = 25.0,
     annotate_peaks: list[bool] | None = None,
 ) -> matplotlib.figure.Figure:
     """Create a matplotlib Figure with all y series plotted against x.
@@ -84,7 +85,7 @@ def create_plot(
     ax1.set_xlabel(x_label)
     ax1.set_ylabel(left_ylabel, color=left_color)
     ax1.tick_params(axis="y", labelcolor="black")
-    ax1.set_xlim(0, 25)
+    ax1.set_xlim(0, x_max)
 
     # Right y-axis: same scale, only label colored by second series
     if len(y_series) >= 2:
