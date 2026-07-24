@@ -49,6 +49,9 @@ def create_plot(
 
     plt.close("all")
     fig, ax1 = plt.subplots()
+    ax1.spines["top"].set_visible(False)
+    if len(y_series) < 2:
+        ax1.spines["right"].set_visible(False)
 
     # All curves share the same y-axis (ax1)
     for i, (y_data, label, show_peak) in enumerate(zip(y_series, labels, annotate_peaks)):
@@ -90,6 +93,7 @@ def create_plot(
     # Right y-axis: same scale, only label colored by second series
     if len(y_series) >= 2:
         ax2 = ax1.twinx()
+        ax2.spines["top"].set_visible(False)
         right_color = CURVE_COLORS[1] if len(CURVE_COLORS) >= 2 else "black"
         right_ylabel = y_labels[1] if len(y_labels) >= 2 else "Y"
         ax2.set_ylim(ax1.get_ylim())

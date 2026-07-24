@@ -34,6 +34,37 @@ class TestCreatePlot:
         total_lines = sum(len(ax.get_lines()) for ax in fig.axes)
         assert total_lines == 2
 
+    def test_single_series_hides_top_and_right_spines(self):
+        x = np.array([0, 1, 2])
+        y_series = [np.array([1, 2, 3])]
+        labels = ["Signal"]
+
+        fig = create_plot(x, y_series, labels)
+
+        assert len(fig.axes) == 1
+        ax = fig.axes[0]
+        assert not ax.spines["top"].get_visible()
+        assert not ax.spines["right"].get_visible()
+
+    def test_multiple_series_hides_only_top_spines(self):
+        x = np.array([0, 1, 2])
+        y_series = [np.array([1, 2, 3]), np.array([4, 5, 6])]
+        labels = ["A", "B"]
+
+        fig = create_plot(
+            x,
+            y_series,
+            labels,
+            y_labels=["Left signal", "Right signal"],
+        )
+
+        assert len(fig.axes) == 2
+        ax1, ax2 = fig.axes
+        assert not ax1.spines["top"].get_visible()
+        assert not ax2.spines["top"].get_visible()
+        assert ax2.spines["right"].get_visible()
+        assert ax2.get_ylabel() == "Right signal"
+
     def test_axis_labels_set(self):
         x = np.array([0, 1, 2])
         y_series = [np.array([1, 2, 3])]

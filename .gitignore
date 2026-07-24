@@ -2,7 +2,6 @@ build/
 data/
 dist/
 icon/
-tests/
 version/
 __pycache__/
 Donna.spec
