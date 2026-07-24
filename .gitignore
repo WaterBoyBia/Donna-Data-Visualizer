@@ -1,0 +1,10 @@
+build/
+data/
+dist/
+icon/
+tests/
+version/
+__pycache__/
+Donna.spec
+version.txt
+nuitka-crash-report.xml
