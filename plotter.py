@@ -24,6 +24,7 @@ def create_plot(
     title: str = "",
     x_max: float = 25.0,
     annotate_peaks: list[bool] | None = None,
+    y_max: float | None = None,
 ) -> matplotlib.figure.Figure:
     """Create a matplotlib Figure with all y series plotted against x.
 
@@ -36,6 +37,8 @@ def create_plot(
         title: Chart title.
         annotate_peaks: Per-series flags; True means annotate that curve's peak.
             None or all-False means no annotations.
+        y_max: Optional shared upper limit for the Y axis. If None, Matplotlib
+            chooses the upper limit automatically.
 
     Returns:
         A matplotlib Figure containing the plot.
@@ -81,6 +84,9 @@ def create_plot(
         y_lo, y_hi = ax1.get_ylim()
         y_range = y_hi - y_lo if y_hi != y_lo else 1.0
         ax1.set_ylim(y_lo, y_hi + y_range * 0.12)
+
+    if y_max is not None:
+        ax1.set_ylim(top=float(y_max))
 
     # Left y-axis label colored by first series, ticks stay black
     left_color = CURVE_COLORS[0] if len(y_series) >= 1 else "black"

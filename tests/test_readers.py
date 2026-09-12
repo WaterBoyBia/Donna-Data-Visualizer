@@ -127,3 +127,39 @@ class TestReadXls:
         npt.assert_almost_equal(x[0], -2.775, decimal=3)
         npt.assert_almost_equal(y_series[0][0], 54.197, decimal=2)
         npt.assert_almost_equal(y_series[1][0], 28.14, decimal=2)
+
+
+class TestReadXlsx:
+    """Tests for reading .xlsx files."""
+
+    def test_read_xlsx_returns_data_and_headers(self, tmp_path, monkeypatch):
+        class FakeWorksheet:
+            def iter_rows(self, values_only=True):
+                return iter([
+                    ("Time", "UV280", "UV260"),
+                    (0, 1.5, 2.5),
+                    (1, 2.5, 3.5),
+                ])
+
+        class FakeWorkbook:
+            worksheets = [FakeWorksheet()]
+
+            def close(self):
+                pass
+
+        class FakeOpenpyxl:
+            @staticmethod
+            def load_workbook(path, read_only=True, data_only=True):
+                return FakeWorkbook()
+
+        path = tmp_path / "sample.xlsx"
+        path.touch()
+        monkeypatch.setitem(__import__("sys").modules, "openpyxl", FakeOpenpyxl)
+
+        x, y_series, labels = read_file(str(path))
+
+        npt.assert_array_equal(x, np.array([0.0, 1.0]))
+        assert len(y_series) == 2
+        npt.assert_array_almost_equal(y_series[0], np.array([1.5, 2.5]))
+        npt.assert_array_almost_equal(y_series[1], np.array([2.5, 3.5]))
+        assert labels == ["UV280", "UV260"]

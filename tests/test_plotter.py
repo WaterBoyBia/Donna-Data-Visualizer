@@ -65,6 +65,22 @@ class TestCreatePlot:
         assert ax2.spines["right"].get_visible()
         assert ax2.get_ylabel() == "Right signal"
 
+    def test_y_max_sets_upper_limit_for_single_series(self):
+        x = np.array([0, 1, 2])
+        fig = create_plot(x, [np.array([1, 2, 3])], ["Signal"], y_max=10)
+        assert fig.axes[0].get_ylim()[1] == pytest.approx(10)
+
+    def test_y_max_is_shared_by_twin_axes(self):
+        x = np.array([0, 1, 2])
+        fig = create_plot(
+            x,
+            [np.array([1, 2, 3]), np.array([4, 5, 6])],
+            ["A", "B"],
+            y_max=10,
+        )
+        assert fig.axes[0].get_ylim()[1] == pytest.approx(10)
+        assert fig.axes[1].get_ylim()[1] == pytest.approx(10)
+
     def test_axis_labels_set(self):
         x = np.array([0, 1, 2])
         y_series = [np.array([1, 2, 3])]

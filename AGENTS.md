@@ -4,7 +4,7 @@
 根据表格文件xls、asc、csv绘制出曲线图。最后的目标是通过pyinstaller对整个项目进行封装，使得可以在其他电脑上独立运行。
 
 ## 技术栈
-- python环境：donna
+- python虚拟环境：donna
 
 ## 项目文件夹结构
 - `data/`：可用的测试数据

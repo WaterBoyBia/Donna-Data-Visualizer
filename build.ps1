@@ -53,7 +53,7 @@ try {
         Invoke-PythonCommand `
             -Arguments @(
                 "-c",
-                "import PyInstaller, matplotlib, numpy, xlrd, tkinter; import main"
+                "import PyInstaller, matplotlib, numpy, xlrd, openpyxl, tkinter; import main"
             ) `
             -FailureMessage "Required packaging or application dependencies are unavailable."
 
